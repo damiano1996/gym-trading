@@ -1,0 +1,6 @@
+gym==0.26.2
+setuptools==68.0.0
+pandas==2.0.2
+requests==2.31.0
+matplotlib==3.7.1
+seaborn==0.12.2
