@@ -63,7 +63,7 @@ The following code snippet demonstrates a basic usage example of the Trading Gym
 import gym
 import numpy as np
 
-from gym_trading.envs.data_loader import ListDataLoader
+from gym_trading.envs.data_loader import ListAssetChartDataLoader
 from gym_trading.envs.exchange import BaseExchange
 from gym_trading.envs.renderer import PlotRenderer
 from gym_trading.envs.rewards import ProfitRewarder
@@ -71,7 +71,7 @@ from gym_trading.envs.rewards import ProfitRewarder
 # Create the Trading Gym environment
 env = gym.make(
     'gym_trading:trading-v0',
-    data_loader=ListDataLoader(...),
+    data_loader=ListAssetChartDataLoader(...),
     exchange=BaseExchange(...),
     rewarder=ProfitRewarder(),
     renderer=PlotRenderer(),

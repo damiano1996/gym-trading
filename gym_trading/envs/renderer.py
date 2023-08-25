@@ -4,12 +4,14 @@ This module provides the implementation of a renderer.
 
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import List
+from typing import List, Tuple, Dict
 
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
 
-from gym_trading.envs.chart import ChartDataFrame
+from gym_trading.envs.chart import AssetDataChart
+from gym_trading.envs.exchange import Exchange
 
 CB91_BLUE = '#2CBDFE'
 CB91_GREEN = '#47DBCD'
@@ -45,7 +47,7 @@ sns.set(rc={'axes.prop_cycle': plt.cycler(color=color_list),
             'ytick.right': False})
 
 sns.set_context("notebook", rc={"font.size": 16,
-                "axes.titlesize": 20, "axes.labelsize": 18})
+                                "axes.titlesize": 20, "axes.labelsize": 18})
 
 
 class Renderer(ABC):
@@ -54,88 +56,70 @@ class Renderer(ABC):
     @abstractmethod
     def render(
             self,
-            chart: ChartDataFrame,
-            buys: List[datetime],
-            sells: List[datetime],
+            charts: Dict[str, AssetDataChart],
+            allocations_history: Tuple[List[datetime], List[np.ndarray]],
             now: datetime,
-            equities: ChartDataFrame):
+            exchange: Exchange):
         """
         Render the chart with buy and sell signals and current equity information.
-
-        Args:
-            chart (ChartDataFrame): The chart data to render.
-            buys (List[datetime]): The list of buy timestamps.
-            sells (List[datetime]): The list of sell timestamps.
-            now (datetime): The current timestamp.
-            equities (ChartDataFrame): The equity data to display.
-
-        Returns:
-            None
         """
 
 
 class PlotRenderer(Renderer):
     """Renders charts using matplotlib."""
 
+    # def __init__(self, figure_name: str = 'reward_plot.png'):
+    #     self.figure_name = figure_name
+
     def render(
             self,
-            chart: ChartDataFrame,
-            buys: List[datetime],
-            sells: List[datetime],
+            charts: Dict[str, AssetDataChart],
+            allocations_history: Tuple[List[datetime], List[np.ndarray]],
             now: datetime,
-            equities: ChartDataFrame):
+            exchange: Exchange):
         """
         Render a chart with buy and sell markers, and equity information.
-
-        Args:
-            chart (ChartDataFrame): The price chart data.
-            buys (List[datetime]): A list of buy timestamps.
-            sells (List[datetime]): A list of sell timestamps.
-            now (datetime): The current timestamp.
-            equities (ChartDataFrame): The equity data.
 
         Returns:
             None
         """
-        fig, axs = plt.subplots(2, 1, figsize=(15, 20))
+        fig, axs = plt.subplots(3, 1, figsize=(15, 20))
 
-        fig.suptitle(f'Total profit: {round(equities.profit(), 2)} %')
+        equities = exchange.equities()
+        profit = (equities[1][-1] / equities[1][0] - 1) * 100
 
-        axs[0].set_title('Prices')
-        axs[0].plot(
-            chart.dates,
-            chart.values,
-            alpha=0.7,
-            label='Prices',
-            zorder=1)
+        fig.suptitle(f'Total profit: {round(profit, 2)} %')
+
+        axs[0].set_title('Assets')
+
+        for i, (asset, chart) in enumerate(charts.items()):
+            axs[0].plot(
+                chart.timestamps(),
+                chart.prices() / chart.prices().max(),
+                alpha=0.7,
+                label=asset,
+                zorder=1)
+
         axs[0].axvline(now, c='b', alpha=0.5, label='Today')
 
-        axs[0].scatter(buys, [chart.value_at(date)
-                       for date in buys], marker='^', c='g', label='BUY', zorder=2)
-        axs[0].scatter(sells,
-                       [chart.value_at(date) for date in sells],
-                       marker='v',
-                       c='r',
-                       label='SELL',
-                       zorder=2)
-        axs[0].set_ylabel('Price')
+        axs[0].set_ylabel('Normalized Price')
         axs[0].set_xlabel('Time')
         axs[0].legend()
 
-        axs[1].set_title('Equity')
-        min_equity = min(equities.values) if len(
-            equities.values) > 0 else 0
-        axs[1].plot(equities.dates, equities.values,
-                    alpha=0.7, label='Equities', zorder=1)
-        axs[1].plot(chart.dates, [min_equity] * len(chart.dates),
-                    alpha=0, linestyle='--', marker='None')
-        axs[1].axvline(now, c='b', alpha=0.5, label='Today')
-        for buy in buys:
-            axs[1].axvline(buy, c='g', alpha=0.2, label='BUY')
-        for sell in sells:
-            axs[1].axvline(sell, c='r', alpha=0.2, label='SELL')
+        axs[1].set_title('Budget Allocation')
+        axs[1].stackplot(
+            allocations_history[0],
+            [[allocation[i] for allocation in allocations_history[1]] for i in range(len(charts.keys()))],
+            alpha=0.5,
+            labels=list(charts.keys()))
+        axs[1].legend()
 
-        axs[1].set_ylabel('Equity')
-        axs[1].set_xlabel('Time')
+        axs[2].set_title('Equity')
+        axs[2].plot(equities[0], equities[1], alpha=0.7, label='Equities', zorder=1)
+        axs[2].axvline(now, c='b', alpha=0.5, label='Today')
 
+        axs[2].set_ylabel('Equity')
+        axs[2].set_xlabel('Time')
+
+        # plt.savefig(self.figure_name)
         plt.show()

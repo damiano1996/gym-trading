@@ -4,36 +4,22 @@ This module provides the implementation of a rewarder.
 
 from abc import ABC, abstractmethod
 
-from gym_trading.envs.chart import ChartDataFrame
+from gym_trading.envs.exchange import Exchange
 
 
 class Rewarder(ABC):
     """Abstract base class for reward computation implementations."""
 
     @abstractmethod
-    def reward(self, equities: ChartDataFrame) -> float:
+    def reward(self, exchange: Exchange) -> float:
         """
-        Compute the reward based on the given equity data.
-
-        Args:
-            equities (ChartDataFrame): The equity data to compute the reward from.
-
-        Returns:
-            float: The computed reward.
+        Computes the reward based on the status of the exchange.
         """
 
 
 class ProfitRewarder(Rewarder):
     """Rewarder implementation that computes the profit as the reward."""
 
-    def reward(self, equities: ChartDataFrame) -> float:
-        """
-        Compute the reward as the total profit from the given equity data.
-
-        Args:
-            equities (ChartDataFrame): The equity data to compute the reward from.
-
-        Returns:
-            float: The computed profit as the reward.
-        """
-        return equities.profit()
+    def reward(self, exchange: Exchange) -> float:
+        equities = exchange.equities()[1]
+        return (equities[-1] / equities[0] - 1) * 100
