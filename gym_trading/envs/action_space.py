@@ -1,5 +1,8 @@
+from typing import Any
+
 import numpy as np
 from gymnasium.spaces import Box
+from numpy._typing import NDArray
 
 
 class BudgetAllocationSpace(Box):
@@ -9,3 +12,8 @@ class BudgetAllocationSpace(Box):
             low=np.zeros(num_assets, dtype=np.float32),
             high=np.ones(num_assets, dtype=np.float32),
             shape=(num_assets,))
+
+    def sample(self, mask: None = None) -> NDArray[Any]:
+        sample = super().sample(mask)
+        normalized_sample = sample / np.sum(sample)
+        return normalized_sample

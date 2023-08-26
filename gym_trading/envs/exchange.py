@@ -25,6 +25,10 @@ class Exchange(ABC):
         """ Buys the given amount.  (amount in reference currency) """
 
     @abstractmethod
+    def update(self, date: datetime):
+        """ To update the internal state at the end of a trading day """
+
+    @abstractmethod
     def equities(self) -> Tuple[List[datetime], List[float]]:
         """ Returns the equity at the given date. """
 
@@ -79,8 +83,6 @@ class BaseExchange(Exchange):
         self.wallet[asset] += self._add_percentage(float(asset_amount), -self.buy_fee)
         self.liquidity -= amount
 
-        self._update_equities_history(date)
-
         return True
 
     def market_sell(self, asset: str, amount: Decimal, date: datetime):
@@ -100,6 +102,9 @@ class BaseExchange(Exchange):
         self.liquidity += self._add_percentage(float(amount), -self.sell_fee)
 
         return True
+
+    def update(self, date: datetime):
+        self._update_equities_history(date)
 
     def equities(self) -> Tuple[List[datetime], List[float]]:
         if len(self.equity_history['Date'].tolist()) == 0:

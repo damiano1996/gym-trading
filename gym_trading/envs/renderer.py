@@ -119,5 +119,6 @@ class PlotRenderer(Renderer):
 
         axs[2].set_ylabel('Equity')
         axs[2].set_xlabel('Time')
+        axs[2].legend()
 
         plt.show()

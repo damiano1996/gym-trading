@@ -27,3 +27,5 @@ requirements.txt
 # Miscellaneous
 .DS_Store
 Thumbs.db
+
+*.csv

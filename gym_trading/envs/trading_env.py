@@ -55,15 +55,14 @@ class TradingEnv(gym.Env):
     def step(
             self, action: ActType
     ) -> tuple[ObsType, SupportsFloat, bool, bool, dict[str, Any]]:
-
         assert action.shape == self.action_space.shape, f'Expected action shape: {self.action_space.shape}, but {action.shape} was given.'
+
+        truncated = False
+        info = {}
 
         target_allocation = action
 
         current_allocation = self.exchange.budget_distribution(self._now())
-
-        self.allocations_history[0].append(self._now())
-        self.allocations_history[1].append(current_allocation)
 
         current_equity = self.exchange.equities()[1][-1]
 
@@ -77,6 +76,12 @@ class TradingEnv(gym.Env):
             elif asset_diff < 0:
                 self.exchange.market_sell(asset_name, np.abs(asset_diff * current_equity), self._now())
 
+        self.exchange.update(self._now())
+
+        actual_allocation = self.exchange.budget_distribution(self._now())
+        self.allocations_history[0].append(self._now())
+        self.allocations_history[1].append(actual_allocation)
+
         self.obs_index += 1
         done = False
         if self.obs_index >= len(self._get_timestamps()):
@@ -86,8 +91,6 @@ class TradingEnv(gym.Env):
 
         reward = self.rewarder.reward(self.exchange)
 
-        truncated = False
-        info = {}
         return observation, reward, done, truncated, info
 
     def reset(
