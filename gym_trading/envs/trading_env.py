@@ -3,14 +3,14 @@ This module provides the implementation of a trading environment.
 """
 
 from datetime import datetime
-from typing import List, Any, Tuple
+from typing import List, Any, Tuple, SupportsFloat
 
-import gym
+import gymnasium as gym
 import numpy as np
 import pandas as pd
-from gym.core import ActType
-from gym.spaces import Box
-from pandas import DataFrame
+from gymnasium.core import ActType
+from gymnasium.experimental.functional import ObsType
+from gymnasium.spaces import Box
 
 from gym_trading.envs.action_space import BudgetAllocationSpace
 from gym_trading.envs.data_loader import AssetChartDataLoader
@@ -52,7 +52,10 @@ class TradingEnv(gym.Env):
         self.observation_space = Box(low=-np.inf, high=np.inf, shape=self.reset()[0].shape)
         self.action_space = BudgetAllocationSpace(len(self.charts.keys()))
 
-    def step(self, action: ActType) -> tuple[DataFrame | Any, float, bool, dict[Any, Any]]:
+    def step(
+            self, action: ActType
+    ) -> tuple[ObsType, SupportsFloat, bool, bool, dict[str, Any]]:
+
         assert action.shape == self.action_space.shape, f'Expected action shape: {self.action_space.shape}, but {action.shape} was given.'
 
         target_allocation = action
@@ -83,16 +86,26 @@ class TradingEnv(gym.Env):
 
         reward = self.rewarder.reward(self.exchange)
 
-        return observation, reward, done, {}
+        truncated = False
+        info = {}
+        return observation, reward, done, truncated, info
 
-    def reset(self, **_kwargs):
+    def reset(
+            self,
+            *,
+            seed: int | None = None,
+            options: dict[str, Any] | None = None,
+    ) -> tuple[ObsType, dict[str, Any]]:
+
         self.allocations_history: Tuple[List[datetime], List[np.ndarray]] = ([], [])
 
         self.obs_index = 0
         self.exchange.reset()
 
         obs = self._get_next_obs()
-        return obs
+        info = {}
+
+        return obs, info
 
     def _get_next_obs(self):
         result = []
@@ -117,6 +130,12 @@ class TradingEnv(gym.Env):
     def render(self, mode: str = 'human'):
         """Render the trading environment."""
         return self.renderer.render(self.charts, self.allocations_history, self._now(), self.exchange)
+
+    # def close(self):
+    #     self.renderer.render(
+    #         self.charts, self.allocations_history, self._now(), self.exchange,
+    #         save=True, filename=f"plot_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png"
+    #     )
 
     def _validate_charts(self):
         if len(self.charts) == 0:

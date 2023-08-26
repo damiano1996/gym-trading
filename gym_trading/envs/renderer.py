@@ -59,7 +59,8 @@ class Renderer(ABC):
             charts: Dict[str, AssetDataChart],
             allocations_history: Tuple[List[datetime], List[np.ndarray]],
             now: datetime,
-            exchange: Exchange):
+            exchange: Exchange
+    ):
         """
         Render the chart with buy and sell signals and current equity information.
         """
@@ -68,15 +69,13 @@ class Renderer(ABC):
 class PlotRenderer(Renderer):
     """Renders charts using matplotlib."""
 
-    # def __init__(self, figure_name: str = 'reward_plot.png'):
-    #     self.figure_name = figure_name
-
     def render(
             self,
             charts: Dict[str, AssetDataChart],
             allocations_history: Tuple[List[datetime], List[np.ndarray]],
             now: datetime,
-            exchange: Exchange):
+            exchange: Exchange
+    ):
         """
         Render a chart with buy and sell markers, and equity information.
 
@@ -121,5 +120,4 @@ class PlotRenderer(Renderer):
         axs[2].set_ylabel('Equity')
         axs[2].set_xlabel('Time')
 
-        # plt.savefig(self.figure_name)
         plt.show()
