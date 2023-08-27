@@ -65,7 +65,7 @@ import numpy as np
 
 from gym_trading.envs.data_loader import ListAssetChartDataLoader
 from gym_trading.envs.exchange import BaseExchange
-from gym_trading.envs.renderer import PlotRenderer
+from gym_trading.envs.renderer import PyGamePlotRenderer
 from gym_trading.envs.rewards import ProfitRewarder
 
 # Create the Trading Gym environment
@@ -74,7 +74,7 @@ env = gym.make(
     data_loader=ListAssetChartDataLoader(...),
     exchange=BaseExchange(...),
     rewarder=ProfitRewarder(),
-    renderer=PlotRenderer(),
+    renderer=PyGamePlotRenderer(),
     observation_window_size=10
 )
 

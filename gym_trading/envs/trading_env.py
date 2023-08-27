@@ -15,19 +15,22 @@ from gymnasium.spaces import Box
 from gym_trading.envs.action_space import BudgetAllocationSpace
 from gym_trading.envs.data_loader import AssetChartDataLoader
 from gym_trading.envs.exchange import Exchange
-from gym_trading.envs.renderer import Renderer
+from gym_trading.envs.renderer import Renderer, MatPlotRenderer
 from gym_trading.envs.rewards import Rewarder
 
 
 class TradingEnv(gym.Env):
     """Custom Gym environment for trading."""
 
+    metadata = {"render_modes": []}
+
     def __init__(
             self,
             data_loader: AssetChartDataLoader,
             exchange: Exchange,
             rewarder: Rewarder,
-            renderer: Renderer,
+            renderer: Renderer = None,
+            final_report_plot: bool = False,
     ):
         """
         Initialize the TradingEnv.
@@ -37,6 +40,7 @@ class TradingEnv(gym.Env):
             exchange (Exchange): The exchange object for trading actions.
             rewarder (Rewarder): The rewarder object to compute rewards.
             renderer (Renderer): The renderer object to visualize the trading environment.
+            final_report_plot (bool): To create a final report.
         """
         self.charts = data_loader.load()
         self._validate_charts()
@@ -44,6 +48,7 @@ class TradingEnv(gym.Env):
         self.exchange = exchange
         self.rewarder = rewarder
         self.renderer = renderer
+        self.final_report_plot = final_report_plot
 
         self.allocations_history: Tuple[List[datetime], List[np.ndarray]] = ([], [])
 
@@ -51,6 +56,9 @@ class TradingEnv(gym.Env):
 
         self.observation_space = Box(low=-np.inf, high=np.inf, shape=self.reset()[0].shape)
         self.action_space = BudgetAllocationSpace(len(self.charts.keys()))
+
+        if self.renderer is not None:
+            self.metadata['render_modes'].append(self.renderer.__class__.__name__)
 
     def step(
             self, action: ActType
@@ -87,11 +95,26 @@ class TradingEnv(gym.Env):
         if self.obs_index >= len(self._get_timestamps()):
             done = True
 
-        observation = self._get_next_obs()
+        observation = self._get_obs()
 
         reward = self.rewarder.reward(self.exchange)
 
+        self._render_frame()
+
+        if done:
+            self._make_final_report()
+
         return observation, reward, done, truncated, info
+
+    def _make_final_report(self):
+        if self.final_report_plot:
+            matplot_renderer = MatPlotRenderer()
+            matplot_renderer.render_frame(self.charts, self.allocations_history, self._now(), self.exchange)
+            matplot_renderer.close()
+
+    def _render_frame(self):
+        if self.renderer is not None:
+            self.renderer.render_frame(self.charts, self.allocations_history, self._now(), self.exchange)
 
     def reset(
             self,
@@ -105,12 +128,16 @@ class TradingEnv(gym.Env):
         self.obs_index = 0
         self.exchange.reset()
 
-        obs = self._get_next_obs()
-        info = {}
+        obs = self._get_obs()
+        info = self._get_info()
 
         return obs, info
 
-    def _get_next_obs(self):
+    @staticmethod
+    def _get_info():
+        return {}
+
+    def _get_obs(self):
         result = []
         for name, chart in self.charts.items():
             data = chart.data_at(self._now())
@@ -132,13 +159,11 @@ class TradingEnv(gym.Env):
 
     def render(self, mode: str = 'human'):
         """Render the trading environment."""
-        return self.renderer.render(self.charts, self.allocations_history, self._now(), self.exchange)
+        self._render_frame()
 
-    # def close(self):
-    #     self.renderer.render(
-    #         self.charts, self.allocations_history, self._now(), self.exchange,
-    #         save=True, filename=f"plot_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png"
-    #     )
+    def close(self):
+        if self.renderer is not None:
+            self.renderer.close()
 
     def _validate_charts(self):
         if len(self.charts) == 0:

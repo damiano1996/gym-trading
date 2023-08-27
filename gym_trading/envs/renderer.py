@@ -6,8 +6,10 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import List, Tuple, Dict
 
+import matplotlib.backends.backend_agg as agg
 import matplotlib.pyplot as plt
 import numpy as np
+import pygame
 import seaborn as sns
 
 from gym_trading.envs.chart import AssetDataChart
@@ -54,7 +56,7 @@ class Renderer(ABC):
     """Abstract base class for rendering implementations."""
 
     @abstractmethod
-    def render(
+    def render_frame(
             self,
             charts: Dict[str, AssetDataChart],
             allocations_history: Tuple[List[datetime], List[np.ndarray]],
@@ -65,11 +67,76 @@ class Renderer(ABC):
         Render the chart with buy and sell signals and current equity information.
         """
 
+    @abstractmethod
+    def close(self):
+        """ To close the renderer """
 
-class PlotRenderer(Renderer):
+
+class MatPlotRenderer(Renderer):
     """Renders charts using matplotlib."""
 
-    def render(
+    def render_frame(
+            self,
+            charts: Dict[str, AssetDataChart],
+            allocations_history: Tuple[List[datetime], List[np.ndarray]],
+            now: datetime,
+            exchange: Exchange
+    ):
+        make_figure(allocations_history, charts, exchange, now)
+        plt.show()
+
+    def close(self):
+        plt.close()
+
+
+def make_figure(allocations_history, charts, exchange, now):
+    fig, axs = plt.subplots(3, 1, figsize=(15, 20))
+
+    equities = exchange.equities()
+
+    profit = (equities[1][-1] / equities[1][0] - 1) * 100
+    fig.suptitle(f'Total profit: {round(profit, 2)} %')
+
+    axs[0].set_title('Assets')
+    for i, (asset, chart) in enumerate(charts.items()):
+        axs[0].plot(
+            chart.timestamps(),
+            chart.prices() / chart.prices().max(),
+            alpha=0.7,
+            label=asset,
+            zorder=1)
+    axs[0].axvline(now, c='b', alpha=0.5, label='Today')
+    axs[0].set_ylabel('Normalized Price')
+    axs[0].set_xlabel('Time')
+    axs[0].legend()
+
+    axs[1].set_title('Budget Allocation')
+    axs[1].stackplot(
+        allocations_history[0],
+        [[allocation[i] for allocation in allocations_history[1]] for i in range(len(charts.keys()))],
+        alpha=0.5,
+        labels=list(charts.keys()))
+    axs[1].legend()
+
+    axs[2].set_title('Equity')
+    axs[2].plot(equities[0], equities[1], alpha=0.7, zorder=1)
+    axs[2].set_ylabel('Equity')
+    axs[2].set_xlabel('Time')
+    return fig
+
+
+class PyGamePlotRenderer(Renderer):
+    """Renders charts using matplotlib."""
+
+    def __init__(self, render_fps=4):
+        super(PyGamePlotRenderer, self).__init__()
+        self.screen = None
+        self.clock = None
+        self.render_fps = render_fps
+
+        self.matplot_renderer = MatPlotRenderer()
+
+    def render_frame(
             self,
             charts: Dict[str, AssetDataChart],
             allocations_history: Tuple[List[datetime], List[np.ndarray]],
@@ -82,43 +149,43 @@ class PlotRenderer(Renderer):
         Returns:
             None
         """
-        fig, axs = plt.subplots(3, 1, figsize=(15, 20))
+        fig = make_figure(allocations_history, charts, exchange, now)
 
-        equities = exchange.equities()
-        profit = (equities[1][-1] / equities[1][0] - 1) * 100
+        # plt.show()
+        plt.close()
 
-        fig.suptitle(f'Total profit: {round(profit, 2)} %')
+        # Render the figure as an image
+        canvas = agg.FigureCanvasAgg(fig)
+        canvas.draw()
+        renderer = canvas.get_renderer()
+        raw_data = renderer.buffer_rgba()
 
-        axs[0].set_title('Assets')
+        self._init_screen(fig)
 
-        for i, (asset, chart) in enumerate(charts.items()):
-            axs[0].plot(
-                chart.timestamps(),
-                chart.prices() / chart.prices().max(),
-                alpha=0.7,
-                label=asset,
-                zorder=1)
+        self._init_clock()
 
-        axs[0].axvline(now, c='b', alpha=0.5, label='Today')
+        size = canvas.get_width_height()
+        surf = pygame.image.frombuffer(raw_data, size, "RGBA")
 
-        axs[0].set_ylabel('Normalized Price')
-        axs[0].set_xlabel('Time')
-        axs[0].legend()
+        self.screen.blit(surf, (0, 0))
+        pygame.display.flip()
 
-        axs[1].set_title('Budget Allocation')
-        axs[1].stackplot(
-            allocations_history[0],
-            [[allocation[i] for allocation in allocations_history[1]] for i in range(len(charts.keys()))],
-            alpha=0.5,
-            labels=list(charts.keys()))
-        axs[1].legend()
+        self.clock.tick(self.render_fps)
 
-        axs[2].set_title('Equity')
-        axs[2].plot(equities[0], equities[1], alpha=0.7, label='Equities', zorder=1)
-        axs[2].axvline(now, c='b', alpha=0.5, label='Today')
+    def _init_clock(self):
+        if self.clock is None:
+            self.clock = pygame.time.Clock()
 
-        axs[2].set_ylabel('Equity')
-        axs[2].set_xlabel('Time')
-        axs[2].legend()
+    def _init_screen(self, fig):
+        if self.screen is None:
+            pygame.init()
+            pygame.display.init()
+            width, height = fig.get_size_inches() * fig.get_dpi()
+            pygame.display.set_mode((int(width), int(height)))
+            pygame.display.set_caption("Trading Gym")
+            self.screen = pygame.display.get_surface()
 
-        plt.show()
+    def close(self):
+        if self.screen is not None:
+            pygame.display.quit()
+            pygame.quit()
