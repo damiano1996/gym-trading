@@ -3,6 +3,7 @@ This module provides the implementation of a trading environment.
 """
 
 from datetime import datetime
+from decimal import Decimal
 from typing import List, Any, Tuple, SupportsFloat
 
 import gymnasium as gym
@@ -79,21 +80,25 @@ class TradingEnv(gym.Env):
         for i, asset_diff in enumerate(diff_allocation):
             asset_name = list(self.charts.keys())[i]
 
-            if asset_diff > 0:
-                self.exchange.market_buy(asset_name, np.abs(asset_diff * current_equity), self._now())
-            elif asset_diff < 0:
-                self.exchange.market_sell(asset_name, np.abs(asset_diff * current_equity), self._now())
+            asset_diff = Decimal(str(asset_diff))
+
+            if asset_diff > Decimal('0'):
+                self.exchange.market_buy(asset_name, abs(asset_diff * current_equity), self._now())
+            elif asset_diff < Decimal('0'):
+                self.exchange.market_sell(asset_name, abs(asset_diff * current_equity), self._now())
+
+        # ---------- NEXT DAY ----------
+
+        self.obs_index += 1
+        done = False
+        if self.obs_index >= len(self._get_timestamps()):
+            done = True
 
         self.exchange.update(self._now())
 
         actual_allocation = self.exchange.budget_distribution(self._now())
         self.allocations_history[0].append(self._now())
         self.allocations_history[1].append(actual_allocation)
-
-        self.obs_index += 1
-        done = False
-        if self.obs_index >= len(self._get_timestamps()):
-            done = True
 
         observation = self._get_obs()
 

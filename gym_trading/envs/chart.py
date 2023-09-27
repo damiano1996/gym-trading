@@ -30,12 +30,6 @@ class Chart(ABC):
         """
 
     @abstractmethod
-    def value_change(self, col_name: str, start_date: datetime, end_date: datetime):
-        """
-            Returns the value change in percentage between the two dates.
-        """
-
-    @abstractmethod
     def timestamps(self) -> List[datetime]:
         """
             Returns a list of timestamps.
@@ -52,9 +46,11 @@ class DataChart(Chart):
         self.dataset = dataset
         self.timestamp_column_name = timestamp_column_name
 
+        self.dataset[self.timestamp_column_name] = pd.to_datetime(self.dataset[self.timestamp_column_name])
+
     def data_at(self, date: datetime) -> Optional[pd.DataFrame]:
         filtered_data = self.dataset[self.dataset[self.timestamp_column_name] == date]
-        return filtered_data if not filtered_data.empty else None
+        return filtered_data.reset_index(drop=True) if not filtered_data.empty else None
 
     def add(self, data: pd.DataFrame):
         self.dataset = pd.concat([self.dataset, data], ignore_index=True)
@@ -66,18 +62,6 @@ class DataChart(Chart):
             ]
         sorted_data = filtered_data.sort_values(by=self.timestamp_column_name, ascending=True)
         return sorted_data
-
-    def value_change(self, col_name: str, start_date: datetime, end_date: datetime):
-        start_data = self.data_at(start_date)
-        end_data = self.data_at(end_date)
-
-        if start_data is None or end_data is None:
-            return None
-
-        start_value = start_data[col_name].prices[0]
-        end_value = end_data[col_name].prices[0]
-        percentage_change = ((end_value - start_value) / start_value) * 100
-        return percentage_change
 
     def timestamps(self) -> List[datetime]:
         return self.dataset[self.timestamp_column_name].sort_values().tolist()

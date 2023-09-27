@@ -21,4 +21,7 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Analysing the code with pylint
         run: |
-          pylint --exit-zero $(git ls-files '*.py')
+          pylint --fail-under=9 $(git ls-files '*.py')
+      - name: Run Tests
+        run: |
+          python -m unittest discover -s tests -p "test_*.py"

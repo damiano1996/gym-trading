@@ -75,7 +75,7 @@ env = gym.make(
     exchange=BaseExchange(...),
     rewarder=ProfitRewarder(),
     renderer=PyGamePlotRenderer(),
-    observation_window_size=10
+    final_report_plot=False
 )
 
 # Reset the environment and obtain the initial observation

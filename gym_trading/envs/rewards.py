@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from decimal import Decimal
 
 from gym_trading.envs.exchange import Exchange
 
@@ -9,7 +10,7 @@ class Rewarder(ABC):
     """
 
     @abstractmethod
-    def reward(self, exchange: Exchange) -> float:
+    def reward(self, exchange: Exchange) -> Decimal:
         """
         Calculate the reward based on the provided exchange data.
 
@@ -17,7 +18,7 @@ class Rewarder(ABC):
             exchange (Exchange): The exchange data.
 
         Returns:
-            float: The calculated reward.
+            Decimal: The calculated reward.
         """
         pass
 
@@ -27,7 +28,7 @@ class ProfitRewarder(Rewarder):
     Calculates the reward based on profit relative to the initial equity.
     """
 
-    def reward(self, exchange: Exchange) -> float:
+    def reward(self, exchange: Exchange) -> Decimal:
         """
         Calculate the profit-based reward.
 
@@ -35,10 +36,10 @@ class ProfitRewarder(Rewarder):
             exchange (Exchange): The exchange data.
 
         Returns:
-            float: The calculated reward.
+            Decimal: The calculated reward.
         """
         equities = exchange.equities()[1]
-        return (equities[-1] / equities[0] - 1) * 100
+        return (Decimal(equities[-1]) / Decimal(equities[0]) - Decimal('1')) * Decimal('100')
 
 
 class OneStepProfitRewarder(Rewarder):
@@ -46,7 +47,7 @@ class OneStepProfitRewarder(Rewarder):
     Calculates the reward based on profit relative to the previous equity step.
     """
 
-    def reward(self, exchange: Exchange) -> float:
+    def reward(self, exchange: Exchange) -> Decimal:
         """
         Calculate the one-step profit-based reward.
 
@@ -54,9 +55,9 @@ class OneStepProfitRewarder(Rewarder):
             exchange (Exchange): The exchange data.
 
         Returns:
-            float: The calculated reward.
+            Decimal: The calculated reward.
         """
         equities = exchange.equities()[1]
         if len(equities) < 2:
-            return 0.0
-        return (equities[-1] / equities[-2] - 1) * 100
+            return Decimal('0.0')
+        return (Decimal(equities[-1]) / Decimal(equities[-2]) - Decimal('1')) * Decimal('100')
