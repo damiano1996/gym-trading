@@ -1,16 +1,28 @@
-# Trading Gym
-The Trading Gym is a gym environment for simulating and testing trading strategies using historical price data. 
-It is built upon the OpenAI Gym framework and provides a customizable environment for developing and evaluating trading algorithms.
+# Trading Gym: A Reinforcement Learning Environment for Trading and Budget Allocation
 
-Review this [jupyter notebook](examples/example.ipynb) to learn more about how to use the library.
+The Trading Gym is a versatile Python library that offers a comprehensive environment for simulating and testing trading strategies, as well as performing budget allocation across a portfolio of assets. Built on the foundation of the OpenAI Gym framework, it provides researchers and traders with a powerful toolkit to develop and evaluate trading algorithms.
 
-## Features
-- Integration with OpenAI Gym: The Trading Gym extends the functionality of OpenAI Gym to provide a trading-specific environment for reinforcement learning and algorithmic trading research.
-- Customizable Data Loader: Load historical price data from various sources and formats, such as CSV files, API calls, or databases, using the flexible Data Loader interface.
-- Exchange Simulation: Simulate trading actions, order execution, and portfolio management with the Exchange component. It provides an interface to interact with the market and simulate trading decisions.
-- Rendering Options: Visualize price data, trading actions, and portfolio performance using different rendering options, such as plotting, logging, or custom renderers.
-- Reward Calculation: Define custom reward functions to evaluate the performance of trading strategies based on specific criteria, such as profit and loss, risk-adjusted returns, or other metrics.
-- Observation Window: Define the number of previous price points to include in the observation space, allowing agents to capture historical trends and patterns.
+## Key Features
+
+### Integration with OpenAI Gym
+- The Trading Gym seamlessly integrates with OpenAI Gym, enhancing its capabilities to cater specifically to reinforcement learning and algorithmic trading research.
+
+### Customizable Data Loader
+- Load historical price data from a variety of sources and formats, including CSV files, API calls, or databases, using the flexible Data Loader interface. This feature enables you to work with real-world data or synthetic data tailored to your needs.
+
+### Exchange Simulation
+- Simulate trading actions, order execution, and portfolio management using the Exchange component. This interface allows you to interact with the market, execute trades, and evaluate trading decisions within a controlled environment.
+
+### Rendering Options
+- Visualize price data, trading actions, and portfolio performance through diverse rendering options. You can choose from various visualization methods, including plotting, logging, or even implement custom renderers to suit your visualization requirements.
+
+### Reward Calculation
+- Define and implement custom reward functions to evaluate the performance of your trading strategies. You can tailor these functions to measure various criteria, such as profit and loss, risk-adjusted returns, or other specific metrics relevant to your trading objectives.
+
+### Budget Allocation
+- In addition to trading, the Trading Gym extends its utility to budget allocation. It allows you to allocate funds across a set of assets, making it suitable for a broader range of financial optimization tasks beyond pure trading strategies.
+
+Whether you're a researcher exploring reinforcement learning in finance or a trader looking to develop and test your trading strategies, the Trading Gym offers a versatile and adaptable environment to meet your needs. To dive deeper into its functionalities and see practical examples, refer to the [jupyter notebook](examples/example.ipynb) provided in the repository.
 
 ## Installation
 To install the Trading Gym, follow these steps:
@@ -85,7 +97,7 @@ observation = env.reset()[0]
 done = False
 while not done:
     # Choose a random action
-    action = np.random.randint(0, env.action_space.n)
+    action = env.action_space.sample()  # Sample a random action from the action space
 
     # Perform the action and receive the next observation and reward
     observation, reward, done, truncated, _ = env.step(action)
@@ -94,6 +106,9 @@ while not done:
 
 # Render the final state of the environment
 env.render()
+
+# Close the environment
+env.close()
 ```
 
 For more details on the Trading Gym API review the [jupyter notebook example](examples/example.ipynb).

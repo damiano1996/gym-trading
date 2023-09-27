@@ -66,7 +66,7 @@ class TestTradingEnv(unittest.TestCase):
         next_obs, reward, done, _, _ = self.env.step(action)
 
         self.assertEqual(next_obs.shape, self.env.observation_space.shape)
-        self.assertIsInstance(reward, Decimal)
+        self.assertIsInstance(reward, float)
         self.assertIsInstance(done, bool)
         self.assertEqual(info, {})
 
@@ -75,13 +75,13 @@ class TestTradingEnv(unittest.TestCase):
 
         self.assertEqual([[100.0]], obs)
         # price:100 -> invest:0 --> next_price:200 -> reward:0.0
-        self._assert_step_outputs(np.array([0]), [[200.0]], Decimal('0'), False)
+        self._assert_step_outputs(np.array([0]), [[200.0]], 0, False)
         # price:200 -> invest:0.5 --> next_price:300 -> reward:24.925
-        self._assert_step_outputs(np.array([0.5]), [[300.0]], Decimal('24.925'), False)
+        self._assert_step_outputs(np.array([0.5]), [[300.0]], 24.925, False)
         # price:300 -> invest:1.0 --> next_price:150 -> reward:−37.562
-        self._assert_step_outputs(np.array([1.0]), [[150.0]], Decimal('-37.562'), False)
+        self._assert_step_outputs(np.array([1.0]), [[150.0]], -37.562, False)
         # price:150 -> invest:0.0 --> next_price: 150 -> force sell since done -> reward:-37.625
-        self._assert_step_outputs(np.array([0.0]), [[150.0]], Decimal('-37.625'), True)
+        self._assert_step_outputs(np.array([0.0]), [[150.0]], -37.625, True)
 
     def _assert_step_outputs(self, action, expected_obs, expected_reward, expected_done):
         actual_obs, actual_reward, actual_done, _, _ = self.env.step(action)

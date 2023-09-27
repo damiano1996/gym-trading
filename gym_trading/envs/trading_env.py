@@ -109,7 +109,7 @@ class TradingEnv(gym.Env):
         if done:
             self._make_final_report()
 
-        return observation, reward, done, truncated, info
+        return observation, float(reward), done, truncated, info
 
     def _make_final_report(self):
         if self.final_report_plot:
