@@ -11,6 +11,8 @@ from pandas import DataFrame, Series
 
 
 class Chart(ABC):
+    """Chart with dates and values."""
+
     @abstractmethod
     def data_at(self, date: datetime) -> Optional[DataFrame]:
         """
@@ -56,6 +58,8 @@ class Chart(ABC):
 
 
 class DataChart(Chart):
+    """Chart with dates and values."""
+
     def __init__(
         self,
         dataset: pd.DataFrame,
@@ -128,6 +132,8 @@ class DataChart(Chart):
 
 
 class AssetDataChart(DataChart):
+    """Asset chart with dates and values."""
+
     def __init__(
         self, dataset: pd.DataFrame, timestamp_column_name: str, price_column_name: str
     ):

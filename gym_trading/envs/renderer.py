@@ -74,8 +74,8 @@ class Renderer(ABC):
 
         Args:
             charts (Dict[str, AssetDataChart]): A dictionary of asset data charts.
-            allocations_history (Tuple[List[datetime], List[np.ndarray]]): A tuple containing history timestamps
-                and allocations data.
+            allocations_history (Tuple[List[datetime], List[np.ndarray]]): A tuple
+                containing history timestamps and allocations data.
             now (datetime): The current date and time.
             exchange (Exchange): The exchange object representing the trading environment.
 
@@ -103,8 +103,8 @@ class MatPlotRenderer(Renderer):
 
         Args:
             charts (Dict[str, AssetDataChart]): A dictionary of asset data charts.
-            allocations_history (Tuple[List[datetime], List[np.ndarray]]): A tuple containing history timestamps
-                and allocations data.
+            allocations_history (Tuple[List[datetime], List[np.ndarray]]): A tuple
+                containing history timestamps and allocations data.
             now (datetime): The current date and time.
             exchange (Exchange): The exchange object representing the trading environment.
 
@@ -124,8 +124,8 @@ def make_figure(allocations_history, charts, exchange, now):
     Create a Matplotlib figure with subplots for assets, budget allocation, and equity.
 
     Args:
-        allocations_history (Tuple[List[datetime], List[np.ndarray]]): A tuple containing history timestamps
-            and allocations data.
+        allocations_history (Tuple[List[datetime], List[np.ndarray]]): A tuple
+            containing history timestamps and allocations data.
         charts (Dict[str, AssetDataChart]): A dictionary of asset data charts.
         exchange (Exchange): The exchange object representing the trading environment.
         now (datetime): The current date and time.
@@ -204,8 +204,8 @@ class PyGamePlotRenderer(Renderer):
 
         Args:
             charts (Dict[str, AssetDataChart]): A dictionary of asset data charts.
-            allocations_history (Tuple[List[datetime], List[np.ndarray]]): A tuple containing history timestamps
-                and allocations data.
+            allocations_history (Tuple[List[datetime], List[np.ndarray]]): A tuple
+                containing history timestamps and allocations data.
             now (datetime): The current date and time.
             exchange (Exchange): The exchange object representing the trading environment.
 
