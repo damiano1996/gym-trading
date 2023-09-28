@@ -24,4 +24,4 @@ jobs:
           pylint --fail-under=9 $(git ls-files 'gym_trading/*.py')
       - name: Run Tests
         run: |
-          python -m unittest discover -s tests -p "test_*.py"
+          python -m unittest
