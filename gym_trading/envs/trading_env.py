@@ -26,12 +26,12 @@ class TradingEnv(gym.Env):
     metadata = {"render_modes": []}
 
     def __init__(
-            self,
-            data_loader: AssetChartDataLoader,
-            exchange: Exchange,
-            rewarder: Rewarder,
-            renderer: Renderer = None,
-            final_report_plot: bool = False,
+        self,
+        data_loader: AssetChartDataLoader,
+        exchange: Exchange,
+        rewarder: Rewarder,
+        renderer: Renderer = None,
+        final_report_plot: bool = False,
     ):
         """
         Initialize the TradingEnv.
@@ -55,16 +55,20 @@ class TradingEnv(gym.Env):
 
         self.obs_index = 0
 
-        self.observation_space = Box(low=-np.inf, high=np.inf, shape=self.reset()[0].shape)
+        self.observation_space = Box(
+            low=-np.inf, high=np.inf, shape=self.reset()[0].shape
+        )
         self.action_space = BudgetAllocationSpace(len(self.charts.keys()))
 
         if self.renderer is not None:
-            self.metadata['render_modes'].append(self.renderer.__class__.__name__)
+            self.metadata["render_modes"].append(self.renderer.__class__.__name__)
 
     def step(
-            self, action: ActType
+        self, action: ActType
     ) -> tuple[ObsType, SupportsFloat, bool, bool, dict[str, Any]]:
-        assert action.shape == self.action_space.shape, f'Expected action shape: {self.action_space.shape}, but {action.shape} was given.'
+        assert (
+            action.shape == self.action_space.shape
+        ), f"Expected action shape: {self.action_space.shape}, but {action.shape} was given."
 
         truncated = False
         info = {}
@@ -82,10 +86,14 @@ class TradingEnv(gym.Env):
 
             asset_diff = Decimal(str(asset_diff))
 
-            if asset_diff > Decimal('0'):
-                self.exchange.market_buy(asset_name, abs(asset_diff * current_equity), self._now())
-            elif asset_diff < Decimal('0'):
-                self.exchange.market_sell(asset_name, abs(asset_diff * current_equity), self._now())
+            if asset_diff > Decimal("0"):
+                self.exchange.market_buy(
+                    asset_name, abs(asset_diff * current_equity), self._now()
+                )
+            elif asset_diff < Decimal("0"):
+                self.exchange.market_sell(
+                    asset_name, abs(asset_diff * current_equity), self._now()
+                )
 
         # ---------- NEXT DAY ----------
 
@@ -114,20 +122,23 @@ class TradingEnv(gym.Env):
     def _make_final_report(self):
         if self.final_report_plot:
             matplot_renderer = MatPlotRenderer()
-            matplot_renderer.render_frame(self.charts, self.allocations_history, self._now(), self.exchange)
+            matplot_renderer.render_frame(
+                self.charts, self.allocations_history, self._now(), self.exchange
+            )
             matplot_renderer.close()
 
     def _render_frame(self):
         if self.renderer is not None:
-            self.renderer.render_frame(self.charts, self.allocations_history, self._now(), self.exchange)
+            self.renderer.render_frame(
+                self.charts, self.allocations_history, self._now(), self.exchange
+            )
 
     def reset(
-            self,
-            *,
-            seed: int | None = None,
-            options: dict[str, Any] | None = None,
+        self,
+        *,
+        seed: int | None = None,
+        options: dict[str, Any] | None = None,
     ) -> tuple[ObsType, dict[str, Any]]:
-
         self.allocations_history: Tuple[List[datetime], List[np.ndarray]] = ([], [])
 
         self.obs_index = 0
@@ -150,7 +161,9 @@ class TradingEnv(gym.Env):
                 data = data.drop(columns=[chart.timestamp_column_name])
                 result.append(data)
             else:
-                raise IndexError(f'Unable to create an observation for date: {self._now()}')
+                raise IndexError(
+                    f"Unable to create an observation for date: {self._now()}"
+                )
 
         return pd.concat(result, ignore_index=True, axis=1).to_numpy(dtype=np.float32)
 
@@ -162,7 +175,7 @@ class TradingEnv(gym.Env):
         timestamps = self._get_timestamps()
         return timestamps[min(self.obs_index, len(timestamps) - 1)]
 
-    def render(self, mode: str = 'human'):
+    def render(self, mode: str = "human"):
         """Render the trading environment."""
         self._render_frame()
 
@@ -172,11 +185,11 @@ class TradingEnv(gym.Env):
 
     def _validate_charts(self):
         if len(self.charts) == 0:
-            raise AssertionError('At least one dataframe must be given.')
+            raise AssertionError("At least one dataframe must be given.")
 
         first_chart = list(self.charts.values())[0]
         unique_dates = set(first_chart.timestamps())
 
         for chart in list(self.charts.values())[1:]:
             if set(chart.timestamps()) != unique_dates:
-                raise AssertionError('All datasets must have same timestamps.')
+                raise AssertionError("All datasets must have same timestamps.")

@@ -21,7 +21,7 @@ class AssetChartDataLoader(ABC):
 class ListAssetChartDataLoader(AssetChartDataLoader):
     """Data loader for list-based data."""
 
-    def __init__(self, dates: List, prices: List, asset_name: str = 'NA'):
+    def __init__(self, dates: List, prices: List, asset_name: str = "NA"):
         """
         Initialize the ListDataLoader.
 
@@ -35,18 +35,24 @@ class ListAssetChartDataLoader(AssetChartDataLoader):
         self.asset_name = asset_name
 
     def load(self) -> Dict[str, AssetDataChart]:
-        data = pd.DataFrame({
-            'Date': self.dates,
-            'Price': self.prices
-        })
+        data = pd.DataFrame({"Date": self.dates, "Price": self.prices})
 
-        return {self.asset_name: AssetDataChart(data, timestamp_column_name='Date', price_column_name='Price')}
+        return {
+            self.asset_name: AssetDataChart(
+                data, timestamp_column_name="Date", price_column_name="Price"
+            )
+        }
 
 
 class PandasAssetChartDataLoader(AssetChartDataLoader):
     """Data loader for multiple datasets."""
 
-    def __init__(self, datasets: Dict[str, pd.DataFrame], timestamp_column_name: str, price_column_name: str):
+    def __init__(
+        self,
+        datasets: Dict[str, pd.DataFrame],
+        timestamp_column_name: str,
+        price_column_name: str,
+    ):
         self.datasets = datasets
         self.timestamp_column_name = timestamp_column_name
         self.price_column_name = price_column_name
@@ -54,6 +60,8 @@ class PandasAssetChartDataLoader(AssetChartDataLoader):
     def load(self) -> Dict[str, AssetDataChart]:
         charts = {}
         for name, dataset in self.datasets.items():
-            charts[name] = AssetDataChart(dataset, self.timestamp_column_name, self.price_column_name)
+            charts[name] = AssetDataChart(
+                dataset, self.timestamp_column_name, self.price_column_name
+            )
 
         return charts
