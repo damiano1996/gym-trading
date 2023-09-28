@@ -24,6 +24,14 @@ The Trading Gym is a versatile Python library that offers a comprehensive enviro
 
 Whether you're a researcher exploring reinforcement learning in finance or a trader looking to develop and test your trading strategies, the Trading Gym offers a versatile and adaptable environment to meet your needs. To dive deeper into its functionalities and see practical examples, refer to the [jupyter notebook](examples/example.ipynb) provided in the repository.
 
+## Action Representation for Asset Allocation
+
+In the context of the Trading Gym, actions provided by the agent are represented as vectors. Each vector signifies a budget allocation strategy, where each value in the vector corresponds to the budget allocated to a specific asset. The size of the vector aligns with the number of assets under consideration.
+
+This action representation accommodates a wide spectrum of asset allocation scenarios, ranging from the allocation of the entire budget to specific assets to not allocating any budget to certain assets. In essence, it encompasses both traditional trading actions of buying and selling, where the agent decides how much capital to allocate to each asset, and cases where assets are excluded from the investment portfolio by allocating zero budget to them.
+
+This flexibility in action representation enables the Trading Gym to handle various asset allocation and trading strategies, making it a versatile tool for experimenting with and evaluating different financial decision-making approaches.
+
 ## Installation
 To install the Trading Gym, follow these steps:
 
@@ -72,8 +80,7 @@ The following code snippet demonstrates a basic usage example of the Trading Gym
 
 ```python
 # Import necessary packages
-import gym
-import numpy as np
+import gymnasium as gym
 
 from gym_trading.envs.data_loader import ListAssetChartDataLoader
 from gym_trading.envs.exchange import BaseExchange
@@ -110,6 +117,8 @@ env.render()
 # Close the environment
 env.close()
 ```
+
+![examples/images/fig_01.png](examples/images/fig_01.png)
 
 For more details on the Trading Gym API review the [jupyter notebook example](examples/example.ipynb).
 

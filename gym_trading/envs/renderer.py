@@ -116,6 +116,8 @@ def make_figure(allocations_history, charts, exchange, now):
         [[allocation[i] for allocation in allocations_history[1]] for i in range(len(charts.keys()))],
         alpha=0.5,
         labels=list(charts.keys()))
+    axs[1].set_ylabel('Allocation Percentage')
+    axs[1].set_xlabel('Time')
     axs[1].legend()
 
     axs[2].set_title('Equity')
