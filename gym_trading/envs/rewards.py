@@ -1,39 +1,66 @@
-"""
-This module provides the implementation of a rewarder.
-"""
-
 from abc import ABC, abstractmethod
+from decimal import Decimal
 
-from gym_trading.envs.chart import ChartDataFrame
+from gym_trading.envs.exchange import Exchange
 
 
 class Rewarder(ABC):
-    """Abstract base class for reward computation implementations."""
+    """
+    Abstract base class for reward calculation.
+    """
 
     @abstractmethod
-    def reward(self, equities: ChartDataFrame) -> float:
+    def reward(self, exchange: Exchange) -> Decimal:
         """
-        Compute the reward based on the given equity data.
+        Calculate the reward based on the provided exchange data.
 
         Args:
-            equities (ChartDataFrame): The equity data to compute the reward from.
+            exchange (Exchange): The exchange data.
 
         Returns:
-            float: The computed reward.
+            Decimal: The calculated reward.
         """
 
 
 class ProfitRewarder(Rewarder):
-    """Rewarder implementation that computes the profit as the reward."""
+    """
+    Calculates the reward based on profit relative to the initial equity.
+    """
 
-    def reward(self, equities: ChartDataFrame) -> float:
+    def reward(self, exchange: Exchange) -> Decimal:
         """
-        Compute the reward as the total profit from the given equity data.
+        Calculate the profit-based reward.
 
         Args:
-            equities (ChartDataFrame): The equity data to compute the reward from.
+            exchange (Exchange): The exchange data.
 
         Returns:
-            float: The computed profit as the reward.
+            Decimal: The calculated reward.
         """
-        return equities.profit()
+        equities = exchange.equities()[1]
+        return (Decimal(equities[-1]) / Decimal(equities[0]) - Decimal("1")) * Decimal(
+            "100"
+        )
+
+
+class OneStepProfitRewarder(Rewarder):
+    """
+    Calculates the reward based on profit relative to the previous equity step.
+    """
+
+    def reward(self, exchange: Exchange) -> Decimal:
+        """
+        Calculate the one-step profit-based reward.
+
+        Args:
+            exchange (Exchange): The exchange data.
+
+        Returns:
+            Decimal: The calculated reward.
+        """
+        equities = exchange.equities()[1]
+        if len(equities) < 2:
+            return Decimal("0.0")
+        return (Decimal(equities[-1]) / Decimal(equities[-2]) - Decimal("1")) * Decimal(
+            "100"
+        )

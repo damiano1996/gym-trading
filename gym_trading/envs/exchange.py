@@ -4,176 +4,166 @@ This module provides the implementation of an exchange.
 
 from abc import ABC, abstractmethod
 from datetime import datetime
+from decimal import Decimal
+from typing import List, Tuple
 
 import numpy as np
+import pandas as pd
 
-from gym_trading.envs.chart import ChartDataFrame
+from gym_trading.envs.data_loader import AssetChartDataLoader
 
 
 class Exchange(ABC):
     """Abstract base class for exchange implementations."""
 
     @abstractmethod
-    def get_equity_history(self) -> ChartDataFrame:
-        """
-        Get the equity history of the exchange.
-
-        Returns:
-            ChartDataFrame: The equity history as a ChartDataFrame object.
-        """
+    def market_buy(self, asset: str, amount: Decimal, date: datetime) -> bool:
+        """Buys the given amount. (amount in reference currency)"""
 
     @abstractmethod
-    def buy_all(self, price: float, date: datetime) -> bool:
-        """
-        Buy all available equity at the specified price and date.
-
-        Args:
-            price (float): The price at which to buy.
-            date (datetime): The date of the buy order.
-
-        Returns:
-            bool: True if the buy order was successful, False otherwise.
-        """
+    def market_sell(self, asset: str, amount: Decimal, date: datetime) -> bool:
+        """Buys the given amount.  (amount in reference currency)"""
 
     @abstractmethod
-    def sell_all(self, price: float, date: datetime) -> bool:
-        """
-        Sell all held equity at the specified price and date.
-
-        Args:
-            price (float): The price at which to sell.
-            date (datetime): The date of the sell order.
-
-        Returns:
-            bool: True if the sell order was successful, False otherwise.
-        """
+    def update(self, date: datetime):
+        """To update the internal state at the end of a trading day"""
 
     @abstractmethod
-    def hold(self, price: float, date: datetime):
-        """
-        Hold equity at the specified price and date.
+    def equities(self) -> Tuple[List[datetime], List[Decimal]]:
+        """Returns the equity at the given date."""
 
-        Args:
-            price (float): The price at which to hold.
-            date (datetime): The date of the hold order.
-        """
+    @abstractmethod
+    def budget_distribution(self, date: datetime) -> np.ndarray:
+        """Returns the budget distribution in percentage."""
 
     @abstractmethod
     def reset(self):
-        """
-        Reset the exchange state.
-        """
+        """Resets the exchange status."""
 
 
 class BaseExchange(Exchange):
     """A base exchange class for buying and selling assets."""
 
     def __init__(
-            self,
-            init_amount=100.0,
-            buy_fee=0.25,
-            sell_fee=0.25
+        self,
+        data_loader: AssetChartDataLoader,
+        init_liquidity: Decimal = Decimal("100.0"),
+        buy_fee: Decimal = Decimal("0.1"),
+        sell_fee: Decimal = Decimal("0.1"),
     ):
-        """
-        Initialize the BaseExchange object.
+        self.charts = data_loader.load()
 
-        Args:
-            init_amount (float, optional): The initial amount of the asset. Defaults to 100.0.
-            buy_fee (float, optional): The buy fee percentage. Defaults to 0.25.
-            sell_fee (float, optional): The sell fee percentage. Defaults to 0.25.
-        """
-        self.init_amount = init_amount
+        self.init_liquidity = init_liquidity
+        self.liquidity = self.init_liquidity
+        self.wallet = {asset: Decimal("0.0") for asset in self.charts.keys()}
 
-        self.current_amount = self.init_amount
-        self.is_reference_asset = True
+        self.equity_history = pd.DataFrame({"Date": [], "Equity": []})
 
         self.buy_fee = buy_fee
         self.sell_fee = sell_fee
 
-        self.equities = ChartDataFrame({'DATE': [], 'VALUE': []})
+    def reset(self):
+        self.liquidity = self.init_liquidity
+        self.wallet = {asset: Decimal("0.0") for asset in self.charts.keys()}
+        self.equity_history = pd.DataFrame({"Date": [], "Equity": []})
 
-    def get_equity_history(self) -> ChartDataFrame:
-        """
-        Get the equity history.
+    def market_buy(self, asset: str, amount: Decimal, date: datetime):
+        if amount < 0:
+            return False
 
-        Returns:
-            ChartDataFrame: The equity history.
-        """
-        return self.equities
+        if amount > self.liquidity:
+            return False
 
-    def buy_all(self, price: float, date: datetime) -> bool:
-        """
-        Buy all the assets.
+        if asset not in list(self.charts.keys()):
+            return False
 
-        Args:
-            price (float): The price of the asset.
-            date (datetime): The date of the transaction.
+        price = Decimal(str(self.charts[asset].price_at(date)))
+        asset_amount = amount / price
 
-        Returns:
-            bool: True if the buy operation is successful, False otherwise.
-        """
-        if self.is_reference_asset:
-            # saving equity considering fees
-            self.equities.add_data(date, self.add_percentage(
-                self.current_amount, -self.buy_fee))
-            # converting to target asset
-            self.current_amount = self.add_percentage(
-                self.current_amount / price, -self.buy_fee)
-            self.is_reference_asset = False
-            return True
-        return False
+        self.wallet[asset] += self._add_percentage(asset_amount, -self.buy_fee)
+        self.liquidity -= amount
 
-    def sell_all(self, price: float, date: datetime) -> bool:
-        """
-        Sell all the assets.
+        return True
 
-        Args:
-            price (float): The price of the asset.
-            date (datetime): The date of the transaction.
+    def market_sell(self, asset: str, amount: Decimal, date: datetime):
+        if amount < Decimal("0"):
+            return False
 
-        Returns:
-            bool: True if the sell operation is successful, False otherwise.
-        """
-        if not self.is_reference_asset:
-            self.current_amount = self.add_percentage(
-                self.current_amount * price, -self.sell_fee)
-            self.is_reference_asset = True
-            # saving current amount in reference asset
-            self.equities.add_data(date, self.current_amount)
-            return True
-        return False
+        if asset not in list(self.charts.keys()):
+            return False
 
-    def hold(self, price: float, date: datetime):
-        """
-        Hold the current amount of assets.
+        price = Decimal(str(self.charts[asset].price_at(date)))
+        asset_amount = amount / price
 
-        Args:
-            price (float): The price of the asset.
-            date (datetime): The date of the transaction.
-        """
-        self.equities.add_data(
-            date,
-            self.equities.values[-1] if len(self.equities.values) > 0 else self.init_amount
+        if asset_amount > self.wallet[asset]:
+            return False
+
+        self.wallet[asset] -= asset_amount
+        self.liquidity += self._add_percentage(amount, -self.sell_fee)
+
+        return True
+
+    def update(self, date: datetime):
+        self._update_equities_history(date)
+
+    def equities(self) -> tuple[list[datetime], list[Decimal]]:
+        if len(self.equity_history["Date"].tolist()) == 0:
+            date = list(self.charts.values())[0].timestamps()[0]
+            return [date], [self._equity_at(date)]
+
+        return (
+            self.equity_history["Date"].tolist(),
+            self.equity_history["Equity"].tolist(),
         )
 
-    def reset(self):
-        """Reset the exchange to its initial state."""
-        self.current_amount = self.init_amount
-        self.is_reference_asset = True
+    def budget_distribution(self, date: datetime) -> np.ndarray:
+        total_equity = self._equity_at(date)
 
-        self.equities = ChartDataFrame({'DATE': [], 'VALUE': []})
+        distribution = np.zeros(len(self.charts.keys()), dtype=np.float32)
+        for i, (asset, asset_amount) in enumerate(self.wallet.items()):
+            price = Decimal(str(self.charts[asset].price_at(date)))
+            asset_to_reference = asset_amount * price
+            asset_allocation = asset_to_reference / total_equity
+            distribution[i] = asset_allocation
+
+        return distribution
 
     @staticmethod
-    def add_percentage(value, percentage):
+    def _add_percentage(value: Decimal, percentage: Decimal) -> Decimal:
         """
         Add a percentage to a value.
 
         Args:
-            value (float): The value to which the percentage is added.
-            percentage (float): The percentage to be added.
+            value Decimal: The value to which the percentage is added.
+            percentage Decimal: The percentage to be added.
 
         Returns:
-            float: The value with the added percentage.
+            Decimal: The value with the added percentage.
         """
-        add = percentage * np.abs(value) / 100.
+        add = percentage * Decimal(str(np.abs(value))) / Decimal("100.0")
         return value + add
+
+    def _update_equities_history(self, date: datetime):
+        current_equity = self._equity_at(date)
+        if not (self.equity_history["Date"] == date).any():
+            # Add a new row for the target date
+            new_row = pd.DataFrame({"Date": [date], "Equity": [current_equity]})
+            self.equity_history = pd.concat(
+                [self.equity_history, new_row], ignore_index=True
+            )
+
+        else:
+            self.equity_history.loc[
+                self.equity_history["Date"] == date, "Equity"
+            ] = current_equity
+
+    def _equity_at(self, date: datetime, use_fee=False) -> Decimal:
+        current_equity = self.liquidity
+
+        for asset, asset_amount in self.wallet.items():
+            price = Decimal(str(self.charts[asset].price_at(date)))
+            current_equity += self._add_percentage(
+                asset_amount * price, -self.sell_fee if use_fee else Decimal("0")
+            )
+
+        return current_equity

@@ -2,175 +2,169 @@
 This module provides classes to define charts with dates and values.
 """
 
+from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Optional, List
 
 import pandas as pd
+from pandas import DataFrame, Series
 
 
-class ChartDataFrame(pd.DataFrame):
-    """
-    A custom DataFrame class for working with chart data.
+class Chart(ABC):
+    """Chart with dates and values."""
 
-    This class extends the pandas DataFrame class and provides additional methods
-    for handling chart data, such as retrieving values at a specific date,
-    calculating profit, and filtering data based on a date window.
-
-    Attributes:
-        _metadata (list): A list of metadata attributes.
-
-    Methods:
-        __init__(*args, **kwargs): Initializes the ChartDataFrame.
-        value_at(date) -> Optional[float]: Retrieves the value at a specific date.
-        add_data(date, value): Adds a new row with the specified date and value.
-        with_data_window_until_date(end_date, window) -> ChartDataFrame:
-            Filters the data based on a date window.
-        profit() -> float: Calculates the profit based on the first and last values.
-        dates() -> List: Returns a list of dates in the DataFrame.
-        values() -> List: Returns a list of values in the DataFrame.
-    """
-    _metadata = ['DATE', 'VALUE']
-
-    def __init__(self, *args, **kwargs):
+    @abstractmethod
+    def data_at(self, date: datetime) -> Optional[DataFrame]:
         """
-        Initializes the ChartDataFrame.
+        Returns the value at the given date.
 
         Args:
-            *args: Variable length argument list.
-            **kwargs: Arbitrary keyword arguments.
-        """
-        super().__init__(*args, **kwargs)
-        self._validate()
-
-    def _validate(self):
-        """
-        Validates the ChartDataFrame.
-
-        Raises:
-            ValueError: If 'DATE' or 'VALUE' columns are missing.
-        """
-        # Check if 'date' column is present
-        if 'DATE' not in self.columns:
-            raise ValueError("Column 'DATE' is required.")
-
-        # Check if 'value' column is present
-        if 'VALUE' not in self.columns:
-            raise ValueError("Column 'VALUE' is required.")
-
-    def value_at(self, date) -> Optional[float]:
-        """
-        Retrieves the value at a specific date.
-
-        Args:
-            date: The date to retrieve the value for.
+            date (datetime): The date for which data is requested.
 
         Returns:
-            Optional[float]: The value at the specified date, or None if not found.
+            Optional[DataFrame]: The data at the given date or None if not found.
         """
-        value = self.loc[self['DATE'] == date, 'VALUE']
-        return value.values[0] if not value.empty else None
 
-    def add_data(self, date, value):
+    @abstractmethod
+    def add(self, data: DataFrame):
         """
-        Adds a new row with the specified date and value.
+        Adds the given data frame to the chart.
 
         Args:
-            date: The date to add.
-            value: The value to add.
-
-        Raises:
-            ValueError: If the new row is missing the 'DATE' or 'VALUE' columns.
+            data (DataFrame): The data frame to add to the chart.
         """
-        new_row = pd.DataFrame({'DATE': [date], 'VALUE': [value]})
-        self._validate_new_row(new_row)
-        self._add_new_row(new_row)
 
-    @staticmethod
-    def _validate_new_row(new_row):
+    @abstractmethod
+    def window(self, start_date: datetime, end_date: datetime) -> DataFrame:
         """
-        Validates a new row.
+        Returns a data frame in the given range.
 
         Args:
-            new_row: The new row to validate.
+            start_date (datetime): The start date of the range.
+            end_date (datetime): The end date of the range.
 
-        Raises:
-            ValueError: If the new row is missing the 'DATE' or 'VALUE' columns.
+        Returns:
+            DataFrame: The data frame containing data within the specified range.
         """
-        # Check if the new row has the required columns
-        if not {'DATE', 'VALUE'}.issubset(new_row.columns):
-            raise ValueError(
-                "New row must contain columns 'DATE' and 'VALUE'.")
 
-    def _add_new_row(self, new_row):
+    @abstractmethod
+    def timestamps(self) -> List[datetime]:
         """
-        Adds a new row to the ChartDataFrame.
+        Returns a list of timestamps.
+
+        Returns:
+            List[datetime]: A list of timestamps.
+        """
+
+
+class DataChart(Chart):
+    """Chart with dates and values."""
+
+    def __init__(
+        self,
+        dataset: pd.DataFrame,
+        timestamp_column_name: str,
+    ):
+        """
+        Initialize a DataChart instance.
 
         Args:
-            new_row: The new row to add.
+            dataset (pd.DataFrame): The dataset containing timestamped data.
+            timestamp_column_name (str): The name of the timestamp column in the dataset.
         """
-        self.loc[len(self)] = new_row.iloc[0]
+        self.dataset = dataset
+        self.timestamp_column_name = timestamp_column_name
 
-    def with_data_window_until_date(self, end_date, window):
+        self.dataset[self.timestamp_column_name] = pd.to_datetime(
+            self.dataset[self.timestamp_column_name]
+        )
+
+    def data_at(self, date: datetime) -> Optional[pd.DataFrame]:
         """
-        Filters the data based on a date window.
+        Returns data at the given date.
 
         Args:
-            end_date: The end date for the data window.
-            window: The number of rows to include in the data window.
+            date (datetime): The date for which data is requested.
 
         Returns:
-            ChartDataFrame: A new ChartDataFrame instance with the filtered data.
+            Optional[pd.DataFrame]: The data at the given date or None if not found.
         """
-        # Sort the DataFrame by date in descending order
-        sorted_data = self.sort_values(by='DATE', ascending=False)
+        filtered_data = self.dataset[self.dataset[self.timestamp_column_name] == date]
+        return filtered_data.reset_index(drop=True) if not filtered_data.empty else None
 
-        # Convert sorted_data to a DataFrame if it's not already
-        if not isinstance(sorted_data, pd.DataFrame):
-            sorted_data = pd.DataFrame(sorted_data)
-
-        # Filter the rows based on the date condition and select the last n
-        # values
-        filtered_data = sorted_data[sorted_data['DATE']
-                                    <= end_date].head(window)
-
-        # Sort the filtered data by date in ascending order
-        filtered_data = filtered_data.sort_values(by='DATE')
-
-        # Create a new ChartDataFrame instance with the filtered data
-        new_chart_data = ChartDataFrame(filtered_data)
-
-        return new_chart_data
-
-    def profit(self):
+    def add(self, data: pd.DataFrame):
         """
-        Calculates the profit based on the first and last values.
+        Adds the given data frame to the chart.
+
+        Args:
+            data (pd.DataFrame): The data frame to add to the chart.
+        """
+        self.dataset = pd.concat([self.dataset, data], ignore_index=True)
+
+    def window(self, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+        """
+        Returns a data frame in the given date range.
+
+        Args:
+            start_date (datetime): The start date of the range.
+            end_date (datetime): The end date of the range.
 
         Returns:
-            float: The calculated profit.
+            pd.DataFrame: The data frame containing data within the specified range.
         """
-        try:
-            values = self['VALUE'].tolist()
-            first_value = values[0]
-            last_value = values[len(values) - 1]
-            return ((last_value / first_value) - 1) * 100
-        except IndexError:
-            return 0
+        filtered_data = self.dataset[
+            (self.dataset[self.timestamp_column_name] >= start_date)
+            & (self.dataset[self.timestamp_column_name] <= end_date)
+        ]
+        sorted_data = filtered_data.sort_values(
+            by=self.timestamp_column_name, ascending=True
+        )
+        return sorted_data
 
-    @property
-    def dates(self) -> List:
+    def timestamps(self) -> List[datetime]:
         """
-        Returns a list of dates in the DataFrame.
-
-        Returns:
-            List: A list of dates.
-        """
-        return self['DATE'].tolist()
-
-    @property
-    def values(self) -> List:
-        """
-        Returns a list of values in the DataFrame.
+        Returns a list of timestamps.
 
         Returns:
-            List: A list of values.
+            List[datetime]: A list of timestamps.
         """
-        return self['VALUE'].tolist()
+        return self.dataset[self.timestamp_column_name].sort_values().tolist()
+
+
+class AssetDataChart(DataChart):
+    """Asset chart with dates and values."""
+
+    def __init__(
+        self, dataset: pd.DataFrame, timestamp_column_name: str, price_column_name: str
+    ):
+        """
+        Initialize an AssetDataChart instance.
+
+        Args:
+            dataset (pd.DataFrame): The dataset containing timestamped data.
+            timestamp_column_name (str): The name of the timestamp column in the dataset.
+            price_column_name (str): The name of the price column in the dataset.
+        """
+        super().__init__(dataset, timestamp_column_name)
+        self.price_column_name = price_column_name
+
+    def price_at(self, date: datetime):
+        """
+        Returns the price at the given date.
+
+        Args:
+            date (datetime): The date for which the price is requested.
+
+        Returns:
+            float: The price at the given date.
+        """
+        return self.data_at(date)[self.price_column_name].iloc[0]
+
+    def prices(self) -> Series:
+        """
+        Returns a Series of prices.
+
+        Returns:
+            Series: A Series containing prices.
+        """
+        return self.dataset[self.price_column_name]
