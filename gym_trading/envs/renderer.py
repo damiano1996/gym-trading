@@ -15,6 +15,7 @@ import seaborn as sns
 from gym_trading.envs.chart import AssetDataChart
 from gym_trading.envs.exchange import Exchange
 
+# Constants for color palette
 CB91_BLUE = "#2CBDFE"
 CB91_GREEN = "#47DBCD"
 CB91_PINK = "#F3A0F2"
@@ -24,6 +25,7 @@ CB91_AMBER = "#F5B14C"
 
 color_list = [CB91_BLUE, CB91_PINK, CB91_GREEN, CB91_AMBER, CB91_PURPLE, CB91_VIOLET]
 
+# Configure seaborn for better visualization
 sns.set(
     rc={
         "axes.prop_cycle": plt.cycler(color=color_list),
@@ -69,11 +71,21 @@ class Renderer(ABC):
     ):
         """
         Render the chart with buy and sell signals and current equity information.
+
+        Args:
+            charts (Dict[str, AssetDataChart]): A dictionary of asset data charts.
+            allocations_history (Tuple[List[datetime], List[np.ndarray]]): A tuple containing history timestamps
+                and allocations data.
+            now (datetime): The current date and time.
+            exchange (Exchange): The exchange object representing the trading environment.
+
+        Returns:
+            None
         """
 
     @abstractmethod
     def close(self):
-        """To close the renderer"""
+        """Close the renderer."""
 
 
 class MatPlotRenderer(Renderer):
@@ -86,14 +98,41 @@ class MatPlotRenderer(Renderer):
         now: datetime,
         exchange: Exchange,
     ):
+        """
+        Render a frame with prices, budget allocation, and current equity information.
+
+        Args:
+            charts (Dict[str, AssetDataChart]): A dictionary of asset data charts.
+            allocations_history (Tuple[List[datetime], List[np.ndarray]]): A tuple containing history timestamps
+                and allocations data.
+            now (datetime): The current date and time.
+            exchange (Exchange): The exchange object representing the trading environment.
+
+        Returns:
+            None
+        """
         make_figure(allocations_history, charts, exchange, now)
         plt.show()
 
     def close(self):
+        """Close the MatPlotRenderer."""
         plt.close()
 
 
 def make_figure(allocations_history, charts, exchange, now):
+    """
+    Create a Matplotlib figure with subplots for assets, budget allocation, and equity.
+
+    Args:
+        allocations_history (Tuple[List[datetime], List[np.ndarray]]): A tuple containing history timestamps
+            and allocations data.
+        charts (Dict[str, AssetDataChart]): A dictionary of asset data charts.
+        exchange (Exchange): The exchange object representing the trading environment.
+        now (datetime): The current date and time.
+
+    Returns:
+        matplotlib.figure.Figure: The Matplotlib figure.
+    """
     fig, axs = plt.subplots(3, 1, figsize=(15, 20))
 
     equities = exchange.equities()
@@ -137,9 +176,15 @@ def make_figure(allocations_history, charts, exchange, now):
 
 
 class PyGamePlotRenderer(Renderer):
-    """Renders charts using matplotlib."""
+    """Renders charts using pygame and matplotlib."""
 
     def __init__(self, render_fps=4):
+        """
+        Initialize the PyGamePlotRenderer.
+
+        Args:
+            render_fps (int): The desired frame rate for rendering.
+        """
         super(PyGamePlotRenderer, self).__init__()
         self.screen = None
         self.clock = None
@@ -155,7 +200,14 @@ class PyGamePlotRenderer(Renderer):
         exchange: Exchange,
     ):
         """
-        Render a chart with buy and sell markers, and equity information.
+        Render a chart with prices, budget allocation, and current equity information.
+
+        Args:
+            charts (Dict[str, AssetDataChart]): A dictionary of asset data charts.
+            allocations_history (Tuple[List[datetime], List[np.ndarray]]): A tuple containing history timestamps
+                and allocations data.
+            now (datetime): The current date and time.
+            exchange (Exchange): The exchange object representing the trading environment.
 
         Returns:
             None
@@ -184,10 +236,12 @@ class PyGamePlotRenderer(Renderer):
         self.clock.tick(self.render_fps)
 
     def _init_clock(self):
+        """Initialize the Pygame clock."""
         if self.clock is None:
             self.clock = pygame.time.Clock()
 
     def _init_screen(self, fig):
+        """Initialize the Pygame screen."""
         if self.screen is None:
             pygame.init()
             pygame.display.init()
@@ -197,6 +251,7 @@ class PyGamePlotRenderer(Renderer):
             self.screen = pygame.display.get_surface()
 
     def close(self):
+        """Close the PyGamePlotRenderer."""
         if self.screen is not None:
             pygame.display.quit()
             pygame.quit()

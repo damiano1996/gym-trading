@@ -155,7 +155,7 @@ class TradingEnv(gym.Env):
 
     def _get_obs(self):
         result = []
-        for name, chart in self.charts.items():
+        for chart in self.charts.values():
             data = chart.data_at(self._now())
             if data is not None and not data.empty:
                 data = data.drop(columns=[chart.timestamp_column_name])

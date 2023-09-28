@@ -20,7 +20,6 @@ class Rewarder(ABC):
         Returns:
             Decimal: The calculated reward.
         """
-        pass
 
 
 class ProfitRewarder(Rewarder):
