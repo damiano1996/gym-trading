@@ -138,19 +138,42 @@ def make_figure(allocations_history, charts, exchange, now):
     equities = exchange.equities()
 
     profit = (equities[1][-1] / equities[1][0] - 1) * 100
-    fig.suptitle(f"Total profit: {round(profit, 2)} %")
 
-    axs[0].set_title("Assets")
+    normalized_mrkt_prices = np.array(
+        [chart.prices() / chart.prices().max() for chart in charts.values()]
+    )
+    average_normalized_mrkt_price = np.mean(normalized_mrkt_prices, axis=0)
+
+    axs[0].plot(
+        list(charts.values())[0].timestamps(),
+        average_normalized_mrkt_price,
+        alpha=1.0,
+        label="Average Market",
+        linestyle="--",
+        zorder=1,
+    )
+
+    average_mrkt_profit = (
+        average_normalized_mrkt_price[-1] / average_normalized_mrkt_price[0] - 1
+    ) * 100.0
+
+    fig.suptitle(
+        f"Total Profit: {round(profit, 2)} %\n"
+        f"vs\n"
+        f"Average Market Profit: {round(average_mrkt_profit, 2)} %"
+    )
+
+    axs[0].set_title("Assets Prices")
     for i, (asset, chart) in enumerate(charts.items()):
         axs[0].plot(
             chart.timestamps(),
             chart.prices() / chart.prices().max(),
-            alpha=0.7,
+            alpha=0.4,
             label=asset,
             zorder=1,
         )
     axs[0].axvline(now, c="b", alpha=0.5, label="Today")
-    axs[0].set_ylabel("Normalized Price")
+    axs[0].set_ylabel("Scaled Price")
     axs[0].set_xlabel("Time")
     axs[0].legend()
 
@@ -164,14 +187,29 @@ def make_figure(allocations_history, charts, exchange, now):
         alpha=0.5,
         labels=list(charts.keys()),
     )
-    axs[1].set_ylabel("Allocation Percentage")
+    axs[1].set_ylabel("Percentage")
     axs[1].set_xlabel("Time")
     axs[1].legend()
 
-    axs[2].set_title("Equity")
-    axs[2].plot(equities[0], equities[1], alpha=0.7, zorder=1)
-    axs[2].set_ylabel("Equity")
+    axs[2].set_title("Portfolio Equity vs Average Market")
+    axs[2].plot(
+        equities[0],
+        np.array(equities[1]) / equities[1][0],
+        alpha=0.7,
+        zorder=1,
+        label="Portfolio Equity",
+    )
+    axs[2].plot(
+        list(charts.values())[0].timestamps(),
+        average_normalized_mrkt_price / average_normalized_mrkt_price[0],
+        alpha=0.5,
+        label="Average Market",
+        linestyle="--",
+        zorder=1,
+    )
+    axs[2].set_ylabel("Scaled Financial Amount")
     axs[2].set_xlabel("Time")
+    axs[2].legend()
     return fig
 
 
